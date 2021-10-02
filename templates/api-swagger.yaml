@@ -1,0 +1,198 @@
+swagger: "2.0"
+info:
+  version: 2.1.4
+  title: Росреестр парсер
+  contact:
+    name: API Support
+host: example.ru
+basePath: /rosreestr
+tags:
+- name: main
+  description: Главные запросы
+schemes:
+- https
+paths:
+  /sendKadastr:
+    post:
+      tags:
+      - main
+      summary: Отправить кадастровый номер на проверку
+      description: Возвращает номер в очереди в БД
+      parameters:
+        - $ref: '#/parameters/kadastr'
+        # - $ref: '#/parameters/region'
+        - $ref: '#/parameters/key'
+        - $ref: '#/parameters/token'
+      responses:
+        200:
+          description: Успешно. В поле number возвращает номер в очереди в БД
+          schema:
+            properties:
+              status:
+                type: string
+                example: Success
+              number:
+                type: integer
+                example: "123"
+        401:
+          description: Нет токена
+          schema:
+            properties:
+              status:
+                type: string
+                example: Error
+        500:
+          description: Если нет параметра kadastr
+          schema:
+            properties:
+              status:
+                type: string
+                example: Error
+              code:
+                type: integer
+                example: 1
+              desc:
+                type: string
+                example: kadastr/token/key param not found
+  
+  /getFileURL:
+    post:
+      tags:
+      - main
+      summary: Проверить заказ
+      description: Возвращает массив элементов с 8 видами статусов (в примере показаны все варианты).<br>Во всех вариантах возвращается поле num - это номер в очереди. <br>Статус 0 - задание добавлено в очерель в БД этого API, но еще не не добавлено в очередь РР. <br> Статус 1 - добавлено в РР, доп поле time - сколько минут прошло с момента добавления в очередь РР. <br> Статус 2 - успешно загрузился файл. Вовзращается ссылка на архив в поле url. <br> Статус 404 - не найдено в БД апи по указанному номеру <br> <b>Далее, ситуации, когда прошло 55 часов и создался еще 1 побочный запрос</b>  <br> Статус 3 -побочное задание добавлено в очерель в БД этого API, но еще не не добавлено в очередь РР. <br> Статус 4 - побочное задание добавлено в РР, доп поле time1 - сколько минут прошло с момента добавления основного задания очередь РР, time2 - сколько минут прошло с момента добавления побочного задания. <br> Статус 5 - успешно загрузился файл из побочного задания. Вовзращается ссылка на архив в поле url. <br> Статус 6 - прошло 55 часов основного и побочного заданий. Полностью остановлено. Требуется перезапуск вручную
+      parameters:
+        - $ref: '#/parameters/ids'
+        - $ref: '#/parameters/token'
+      responses:
+        200:
+          description: Успешно
+          schema:
+            
+            properties:
+              answer:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    status:
+                      type: integer
+                    desc:
+                      type: string
+                    url:
+                      type: string
+                  example:
+                  - status: 0
+                    num: 1234
+                    desc: "Waiting rcdata"
+                  
+                  - status: 1
+                    desc: "Waiting rr"
+                    num: 1234
+                    time: 123
+                  
+                  # - status: 2
+                  #   desc: "Waiting rr stopped"
+                  
+                  - status: 2
+                    desc: "Success"
+                    num: 1234
+                    url: "https://example.ru/rosreestr/*.zip"
+                    
+                  - status: 404
+                    num: 1234
+                  
+                  - status: 3
+                    num: 1234
+                    desc: "Waiting rcdata 2"
+                  
+                  - status: 4
+                    desc: "Waiting rr 2"
+                    num: 1234
+                    time1: 123
+                    time2: 123
+                  
+                  - status: 5
+                    desc: "Success"
+                    num: 1234
+                    url: "https://example.ru/rosreestr/*.zip"
+                  
+                  - status: 6
+                    desc: "Waiting rr full stopped"
+                    num: 1234
+                    time1: 123
+                    time2: 123
+        
+        401:
+          description: Нет токена
+          schema:
+            properties:
+              status:
+                type: string
+                example: Error
+        
+        500:
+          description: Если нет параметров обязательных
+          schema:
+            properties:
+              status:
+                type: string
+                example: Error
+              code:
+                type: integer
+                example: 1
+              desc:
+                type: string
+                example: ids/token param not found
+        208:
+          description: Если нет параметров обязательных
+          schema:
+            properties:
+              status:
+                type: string
+                example: Error
+              code:
+                type: integer
+                example: 1
+              desc:
+                type: string
+                example: ids/token param not found
+  
+parameters:
+  
+  kadastr:
+    in: formData
+    name: kadastr
+    required: true
+    type: string
+    description: Кадастровый номер
+  region:
+    in: formData
+    name: region
+    required: true
+    type: string
+    enum: ["Алтайский край","Амурская область","Архангельская область","Астраханская область","Белгородская область","Брянская область","Владимирская область","Волгоградская область","Вологодская область", "Воронежская область", "Еврейская А.обл.", "Забайкальский край", "Ивановская область", "Иркутская область", "Кабардино-Балкарская Республика", "Калининградская область", "Калужская область", "Камчатский край", "Карачаево-Черкесская Республика", "Кемеровская область", "Кировская область", "Костромская область", "Краснодарский край", "Красноярский край", "Курганская область", "Курская область", "Ленинградская область", "Липецкая область", "Магаданская область", "Москва", "Московская область", "Мурманская область", "Ненецкий АО", "Нижегородская область", "Новгородская область", "Новосибирская область", "Омская область", "Оренбургская область", "Орловская область", "Пензенская область", "Пермский край", "Приморский край", "Псковская область", "Республика Адыгея", "Республика Алтай", "Республика Башкортостан", "Республика Бурятия", "Республика Дагестан", "Республика Ингушетия", "Республика Калмыкия", "Республика Карелия", "Республика Коми", "Республика Крым", "Республика Марий Эл", "Республика Мордовия", "Республика Саха (Якутия)", "Республика Северная Осетия", "Республика Татарстан", "Республика Тыва", "Республика Хакасия", "Ростовская область", "Рязанская область", "Самарская область", "Санкт-Петербург", "Саратовская область", "Сахалинская область", "Свердловская область", "Севастополь", "Смоленская область", "Ставропольский край", "Тамбовская область", "Тверская область", "Томская область", "Тульская область", "Тюменская область", "Удмуртская Республика", "Ульяновская область", "Хабаровский край", "Ханты-Мансийский АО", "Челябинская область", "Чеченская Республика", "Чувашская Республика", "Чукотский АО",  "Ямало-Ненецкий АО"]
+    description: Название региона
+  key:
+    in: formData
+    name: key
+    required: true
+    type: string
+    enum: ["1","2"]
+    description: 1 - это запросить сведения об объекте; 2 - это сведения о переходе прав
+  ids:
+    in: body
+    required: true
+    name: ids
+    schema:
+      type: string
+      example: '{"ids": [1,2]}'
+    description: Номера идентификаторов, разделенных запятыми.  
+  token:
+    in: query
+    name: token
+    required: true
+    # schema:
+    type: string
+    description: Секретный ключ
+
